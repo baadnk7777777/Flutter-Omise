@@ -1,6 +1,11 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_omise/component/show_title.dart';
 import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
+import 'package:omise_flutter/omise_flutter.dart';
+
+import 'package:http/http.dart' as http;
 
 class Credit extends StatefulWidget {
   const Credit({super.key});
@@ -73,16 +78,69 @@ class _CreditState extends State<Credit> {
       child: ElevatedButton(
         onPressed: () {
           if (formKey.currentState!.validate()) {
-            print('Value IDCard: $idCard');
-            expireDateYear = expireDateStr?.substring(0, 2);
-            expireDateMonth = expireDateStr?.substring(2, 6);
-            print('Value ExpireDate: $expireDateMonth/$expireDateYear');
-            print('Value CVC: $cvc');
+            getTokenAndChargeOmise();
           }
         },
         child: const Text("Add money"),
       ),
     );
+  }
+
+  Future<void> getTokenAndChargeOmise() async {
+    String publicKey = 'pkey_test_5vgx0dq1krw72uvsyr8';
+    print('Value IDCard: $idCard');
+    print('Value ExpireDate: $expireDateMonth/$expireDateYear');
+    print('Value CVC: $cvc');
+    print('Public Key: $publicKey');
+
+    OmiseFlutter omise = OmiseFlutter(publicKey);
+    try {
+      await omise.token
+          .create('$name $surname', idCard!, expireDateMonth!, expireDateYear!,
+              cvc!)
+          .then((value) async {
+        String token = value.id.toString();
+        print(token);
+
+        String secretKey = "skey_test_5vgtd17w5kcgvv6tlbj";
+        String url = "https://api.omise.co/charges";
+        String basicAuth =
+            'Basic ' + base64Encode(utf8.encode(secretKey + ":"));
+
+        Map<String, String> headerMap = {};
+        headerMap['Authorization'] = basicAuth;
+        headerMap['Cache-Control'] = 'no-cache';
+        headerMap['Content-Type'] = 'application/x-www-form-urlencoded';
+
+        String zero = '00';
+        amount = '$amount$zero';
+        print(amount);
+
+        Map<String, dynamic> data = {};
+        data['amount'] = amount;
+        data['currency'] = 'thb';
+        data['card'] = token;
+
+        Uri uri = Uri.parse(url);
+
+        http.Response response = await http.post(
+          uri,
+          headers: headerMap,
+          body: data,
+        );
+
+        var result = json.decode(response.body);
+
+        print(result);
+      });
+    } catch (e) {
+      if (e.toString() == "Invalid request: invalid_card: number is invalid.") {
+        print(e.toString());
+        const Dialog(
+          child: Text("number is invalid."),
+        );
+      }
+    }
   }
 
   Widget formAmount() => Padding(
@@ -92,6 +150,7 @@ class _CreditState extends State<Credit> {
             if (value!.isEmpty) {
               return "Please fill amount in the blank";
             } else {
+              amount = value.trim();
               return null;
             }
           },
@@ -169,7 +228,20 @@ class _CreditState extends State<Credit> {
             if (expireDateStr!.length != 6) {
               return "Please fill expire date 6 digits";
             } else {
-              return null;
+              expireDateMonth = expireDateStr?.substring(0, 2);
+              expireDateYear = expireDateStr?.substring(2, 6);
+
+              int expireDateMonthInt = int.parse(expireDateMonth!);
+              int expireDateYearInt = int.parse(expireDateYear!);
+
+              expireDateMonth = expireDateMonthInt.toString();
+              int nowYear = int.parse(DateTime.now().year.toString());
+
+              if (expireDateMonthInt > 12 && expireDateYearInt < nowYear) {
+                return "Please fill expire date month less than 12 or year greater than $nowYear";
+              } else {
+                return null;
+              }
             }
           }
         },
@@ -236,6 +308,7 @@ class _CreditState extends State<Credit> {
             if (value!.isEmpty) {
               return "Please fill name in the blank";
             } else {
+              name = value.trim();
               return null;
             }
           },
@@ -253,6 +326,7 @@ class _CreditState extends State<Credit> {
             if (value!.isEmpty) {
               return "Please fill surname in the blank";
             } else {
+              surname = value.trim();
               return null;
             }
           },
