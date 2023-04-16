@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_omise/component/show_title.dart';
+import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
 
 class Credit extends StatefulWidget {
   const Credit({super.key});
@@ -9,6 +10,25 @@ class Credit extends StatefulWidget {
 }
 
 class _CreditState extends State<Credit> {
+  // Create variable for store data.
+  String? name,
+      surname,
+      idCard,
+      expireDateStr,
+      expireDateYear,
+      expireDateMonth,
+      cvc,
+      amount;
+
+  // Decare MaskTextInputFormatter for format text.
+  MaskTextInputFormatter idCardMask =
+      MaskTextInputFormatter(mask: '#### - #### - #### - ####');
+
+  MaskTextInputFormatter expireDateMask =
+      MaskTextInputFormatter(mask: '## / ####');
+
+  MaskTextInputFormatter cvcMask = MaskTextInputFormatter(mask: '###');
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -40,7 +60,13 @@ class _CreditState extends State<Credit> {
     return Container(
       width: double.infinity,
       child: ElevatedButton(
-        onPressed: () {},
+        onPressed: () {
+          print('Value IDCard: $idCard');
+          expireDateYear = expireDateStr?.substring(0, 2);
+          expireDateMonth = expireDateStr?.substring(2, 6);
+          print('Value ExpireDate: $expireDateMonth/$expireDateYear');
+          print('Value CVC: $cvc');
+        },
         child: const Text("Add money"),
       ),
     );
@@ -91,6 +117,10 @@ class _CreditState extends State<Credit> {
 
   Widget formCVC() => TextFormField(
         keyboardType: TextInputType.number,
+        inputFormatters: [cvcMask],
+        onChanged: (value) {
+          cvc = cvcMask.getUnmaskedText();
+        },
         decoration: const InputDecoration(
           hintText: "xxx",
           border: OutlineInputBorder(),
@@ -99,6 +129,10 @@ class _CreditState extends State<Credit> {
 
   Widget formExpireDate() => TextFormField(
         keyboardType: TextInputType.number,
+        inputFormatters: [expireDateMask],
+        onChanged: (value) {
+          expireDateStr = expireDateMask.getUnmaskedText();
+        },
         decoration: const InputDecoration(
           hintText: "xx/xxxx",
           border: OutlineInputBorder(),
@@ -108,6 +142,11 @@ class _CreditState extends State<Credit> {
   Widget formIDcard() => Padding(
         padding: const EdgeInsets.symmetric(horizontal: 10.0),
         child: TextFormField(
+          inputFormatters: [idCardMask], // use inputFormatters.
+          onChanged: (value) {
+            //idCard = value.trim();
+            idCard = idCardMask.getUnmaskedText();
+          },
           keyboardType: TextInputType.number, // Keyboard show only number.
           decoration: const InputDecoration(
             hintText: "xxxx-xxxx-xxxx-xxxx",
